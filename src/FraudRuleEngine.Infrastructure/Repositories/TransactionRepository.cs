@@ -50,4 +50,10 @@ public class TransactionRepository : ITransactionRepository
         _context.Transactions.Update(transaction);
         await _context.SaveChangesAsync();
     }
+
+    public async Task AddEvaluationAsync(FraudEvaluation evaluation)
+    {
+        _context.FraudEvaluations.Add(evaluation);
+        await _context.SaveChangesAsync();
+    }
 }

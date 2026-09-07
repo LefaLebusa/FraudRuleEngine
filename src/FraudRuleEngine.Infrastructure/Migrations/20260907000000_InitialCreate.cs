@@ -1,11 +1,15 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using FraudRuleEngine.Infrastructure.Persistence;
 
 #nullable disable
 
 namespace FraudRuleEngine.Infrastructure.Migrations
 {
+    [DbContext(typeof(FraudDbContext))]
+    [Migration("20260907000000_InitialCreate")]
     public partial class InitialCreate : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)

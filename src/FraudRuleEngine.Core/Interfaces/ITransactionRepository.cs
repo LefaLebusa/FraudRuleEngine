@@ -10,4 +10,5 @@ public interface ITransactionRepository
     Task<IEnumerable<Transaction>> GetRecentByAccountIdAsync(string accountId, TimeSpan window);
     Task<IEnumerable<Transaction>> GetFlaggedAsync();
     Task UpdateAsync(Transaction transaction);
+    Task AddEvaluationAsync(FraudEvaluation evaluation);
 }

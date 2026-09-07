@@ -39,8 +39,7 @@ public class FraudEvaluationService
             }
         };
 
-        transaction.FraudEvaluation = evaluation;
-        await _repository.UpdateAsync(transaction);
+        await _repository.AddEvaluationAsync(evaluation);
 
         return evaluation;
     }
