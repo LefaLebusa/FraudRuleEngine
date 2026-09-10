@@ -18,6 +18,7 @@ publish/
 ## Secrets
 appsettings.Development.json
 *secrets*
+.env
 
 ## Docker
 .dockerignore
