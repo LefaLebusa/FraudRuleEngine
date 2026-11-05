@@ -11,11 +11,11 @@ namespace FraudRuleEngine.API.Controllers;
 // submission so that only an authenticated caller can change an alert recipient.
 [ApiController]
 [Route("api/accounts")]
-public class AccountsController(
+public class AlertsForAccountsController(
     AddEmailCommandHandler addEmail,
     IValidator<AccountIdRequest> accountIdValidator,
     IValidator<AlertEmailRequest> alertEmailValidator,
-    ILogger<AccountsController> logger) : ControllerBase
+    ILogger<AlertsForAccountsController> logger) : ControllerBase
 {
     /// <summary>Set the email address that receives fraud alerts for an account.</summary>
     [HttpPut("{accountId}/alert-email")]

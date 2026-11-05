@@ -4,7 +4,7 @@ namespace FraudRuleEngine.Core.Features.Transactions;
 
 public interface ITransactionRepository
 {
-    Task AddAsync(Transaction transaction, CancellationToken cancellationToken);
+    Task AddRangeAsync(IReadOnlyList<Transaction> transactions, CancellationToken cancellationToken);
     Task<Transaction?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
     Task<List<Transaction>> GetByAccountIdAsync(string accountId, CancellationToken cancellationToken);
     Task<List<Transaction>> GetRecentByAccountIdAsync(string accountId, TimeSpan window, CancellationToken cancellationToken);

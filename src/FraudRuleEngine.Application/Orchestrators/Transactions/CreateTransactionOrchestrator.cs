@@ -4,29 +4,30 @@ using Microsoft.Extensions.Logging;
 
 namespace FraudRuleEngine.Application.Orchestrators.Transactions;
 
-public sealed record CreateTransactionOrchestrator(TransactionDto Transaction);
+public sealed record CreateTransactionOrchestrator(IReadOnlyList<TransactionDto> Transactions);
 
 public sealed class CreateTransactionOrchestratorHandler(StoreTransactionCommandHandler saveTransactionCommand,
                                                          ILogger<CreateTransactionOrchestratorHandler> logger)
 {
-    public async Task<Guid> Handle(CreateTransactionOrchestrator request, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<Guid>> Handle(CreateTransactionOrchestrator request, CancellationToken cancellationToken)
     {
-        // 1. Create the transaction
-        var transaction = Transaction.Create(request.Transaction.AccountId,
-                                             request.Transaction.Amount,
-                                             request.Transaction.Currency,
-                                             request.Transaction.MerchantName,
-                                             request.Transaction.MerchantCategory,
-                                             request.Transaction.Country,
-                                             request.Transaction.TransactionType,
-                                             request.Transaction.ReferenceNumber);
+        // 1. Create the transactions
+        var transactions = request.Transactions
+            .Select(dto => Transaction.Create(dto.AccountId,
+                                              dto.Amount,
+                                              dto.Currency,
+                                              dto.MerchantName,
+                                              dto.MerchantCategory,
+                                              dto.Country,
+                                              dto.TransactionType,
+                                              dto.ReferenceNumber))
+            .ToList();
 
-        // 2. Save the transaction
-        logger.LogDebug("Storing {TransactionType} of {Amount} {Currency} for account {AccountId}",
-                        transaction.TransactionType, transaction.Amount, transaction.Currency, transaction.AccountId);
-        await saveTransactionCommand.Handle(new StoreTransactionCommand(transaction), cancellationToken);
-        logger.LogInformation("Transaction saved with ID: {TransactionId}", transaction.Id);
+        // 2. Save the whole batch
+        logger.LogDebug("Storing a batch of {TransactionCount} transaction(s)", transactions.Count);
+        await saveTransactionCommand.Handle(new StoreTransactionCommand(transactions), cancellationToken);
+        logger.LogInformation("Saved {TransactionCount} transaction(s)", transactions.Count);
 
-        return transaction.Id;
+        return transactions.Select(t => t.Id).ToList();
     }
 }

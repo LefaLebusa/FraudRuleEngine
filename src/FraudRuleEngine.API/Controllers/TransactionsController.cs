@@ -12,27 +12,31 @@ namespace FraudRuleEngine.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 public class TransactionsController(
-    CreateTransactionOrchestratorHandler createTransaction,
+    CreateTransactionOrchestratorHandler createTransactions,
     EvaluationOrchestratorHandler evaluation,
     GetByIdQueryHandler getById,
     GetFlaggedTransactionsQueryHandler getFlagged,
     GetByAccountQueryHandler getByAccount,
-    IValidator<TransactionDto> transactionValidator,
+    IValidator<TransactionBatch> transactionBatchValidator,
     IValidator<AccountIdRequest> accountIdValidator) : ControllerBase
 {
     private static readonly List<string> FlaggedRiskLevels = [RiskLevels.Medium, RiskLevels.High];
 
-    /// <summary>Submit a transaction and evaluate it for potential fraud.</summary>
+    /// <summary>Submit one or more transactions (1 to 100) and evaluate each one for potential fraud.</summary>
     [HttpPost]
-    public async Task<IActionResult> Submit([FromBody] TransactionDto request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Submit([FromBody] List<TransactionDto> request, CancellationToken cancellationToken)
     {
-        var invalid = await this.ValidateAsync(transactionValidator, request, cancellationToken);
+        var invalid = await this.ValidateAsync(transactionBatchValidator, new TransactionBatch(request), cancellationToken);
         if (invalid is not null) return invalid;
 
-        var transactionId = await createTransaction.Handle(new CreateTransactionOrchestrator(request), cancellationToken);
-        await evaluation.Handle(new EvaluationOrchestrator(transactionId), cancellationToken);
+        // Save the whole batch first, then evaluate each stored transaction in the order submitted
+        var transactionIds = await createTransactions.Handle(new CreateTransactionOrchestrator(request), cancellationToken);
+        foreach (var transactionId in transactionIds)
+        {
+            await evaluation.Handle(new EvaluationOrchestrator(transactionId), cancellationToken);
+        }
 
-        return CreatedAtAction(nameof(GetById), new { id = transactionId }, new { id = transactionId });
+        return StatusCode(StatusCodes.Status201Created, new { transactionIds });
     }
 
     /// <summary>Get transaction details.</summary>

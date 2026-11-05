@@ -92,29 +92,31 @@ Expected output: 19 tests, all passing.
 
 ## Example Request
 
+`POST /api/transactions` takes a JSON array of 1 to 100 transactions. Each one is saved, then evaluated for fraud in the order submitted. If any transaction in the batch is invalid, none of them are saved.
+
 ```json
 POST /api/transactions
+[
+  {
+    "accountId": "ACC123456",
+    "amount": 75000.00,
+    "currency": "ZAR",
+    "merchantName": "Unknown Vendor",
+    "merchantCategory": "GENERAL",
+    "country": "ZA",
+    "transactionType": "DEBIT",
+    "referenceNumber": "REF-001"
+  }
+]
+```
+
+Example response (`201 Created`):
+
+```json
 {
-  "accountId": "ACC123456",
-  "amount": 75000.00,
-  "currency": "ZAR",
-  "merchantName": "Unknown Vendor",
-  "merchantCategory": "GENERAL",
-  "country": "ZA",
-  "transactionType": "DEBIT",
-  "referenceNumber": "REF-001"
+  "transactionIds": ["3f2c1a4e-8b7d-4c2a-9f1e-5d6a7b8c9d0e"]
 }
 ```
 
-Example response (flagged for HIGH_AMOUNT):
-
-```json
-{
-  "saved": { "id": "...", "accountId": "ACC123456", "amount": 75000.00, ... },
-  "evaluation": {
-    "isFlagged": true,
-    "triggeredRules": ["HIGH_AMOUNT"],
-    "riskLevel": "MEDIUM"
-  }
-}
+Use `GET /api/transactions/{id}` with an ID from the response to see the transaction and its fraud evaluation.
 ```

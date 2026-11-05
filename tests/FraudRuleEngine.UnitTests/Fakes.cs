@@ -10,9 +10,9 @@ internal sealed class FakeTransactionRepository : ITransactionRepository
 {
     public List<Transaction> Items { get; } = [];
 
-    public Task AddAsync(Transaction transaction, CancellationToken cancellationToken)
+    public Task AddRangeAsync(IReadOnlyList<Transaction> transactions, CancellationToken cancellationToken)
     {
-        Items.Add(transaction);
+        Items.AddRange(transactions);
         return Task.CompletedTask;
     }
 

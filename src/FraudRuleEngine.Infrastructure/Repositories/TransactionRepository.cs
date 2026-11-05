@@ -7,9 +7,10 @@ namespace FraudRuleEngine.Infrastructure.Repositories;
 
 public class TransactionRepository(FraudDbContext context) : ITransactionRepository
 {
-    public async Task AddAsync(Transaction transaction, CancellationToken cancellationToken)
+    // The whole batch is saved in one SaveChanges call, so either every transaction is stored or none is
+    public async Task AddRangeAsync(IReadOnlyList<Transaction> transactions, CancellationToken cancellationToken)
     {
-        context.Transactions.Add(transaction);
+        context.Transactions.AddRange(transactions);
         await context.SaveChangesAsync(cancellationToken);
     }
 
