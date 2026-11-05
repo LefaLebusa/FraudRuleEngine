@@ -8,6 +8,16 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowReact", policy =>
+    {
+        policy.WithOrigins("http://localhost:3000")
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
+});
+
 builder.Services.AddControllers().AddJsonOptions(o =>
     o.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
 builder.Services.AddEndpointsApiExplorer();
@@ -27,6 +37,15 @@ builder.Services.AddScoped<IFraudRule, RoundAmountRule>();
 builder.Services.AddScoped<FraudEvaluationService>();
 builder.Services.AddScoped<TransactionService>();
 
+var emailConfig = builder.Configuration.GetSection("Email");
+builder.Services.AddScoped<EmailService>(sp => new EmailService(
+    emailConfig["SmtpServer"] ?? "smtp.gmail.com",
+    int.Parse(emailConfig["SmtpPort"] ?? "587"),
+    emailConfig["SenderEmail"] ?? "noreply@fraudengine.com",
+    emailConfig["SenderPassword"] ?? "your-app-password"
+));
+builder.Services.AddScoped<AlertService>();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -34,6 +53,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseCors("AllowReact");
 
 app.UseHttpsRedirection();
 app.MapControllers();

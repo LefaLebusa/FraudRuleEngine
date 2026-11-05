@@ -8,11 +8,13 @@ public class FraudEvaluationService
 {
     private readonly IEnumerable<IFraudRule> _rules;
     private readonly ITransactionRepository _repository;
+    private readonly AlertService? _alertService;
 
-    public FraudEvaluationService(IEnumerable<IFraudRule> rules, ITransactionRepository repository)
+    public FraudEvaluationService(IEnumerable<IFraudRule> rules, ITransactionRepository repository, AlertService? alertService = null)
     {
         _rules = rules;
         _repository = repository;
+        _alertService = alertService;
     }
 
     public async Task<FraudEvaluation> EvaluateAsync(Transaction transaction)
@@ -40,6 +42,11 @@ public class FraudEvaluationService
         };
 
         await _repository.AddEvaluationAsync(evaluation);
+
+        if (_alertService != null)
+        {
+            await _alertService.SendAlertIfNeededAsync(transaction, evaluation);
+        }
 
         return evaluation;
     }

@@ -27,4 +27,6 @@ public class TransactionService
 
     public Task<IEnumerable<Transaction>> GetByAccountAsync(string accountId)
         => _repository.GetByAccountIdAsync(accountId);
+
+    public Task<IEnumerable<Transaction>> GetAllAsync() => _repository.GetAllAsync();
 }

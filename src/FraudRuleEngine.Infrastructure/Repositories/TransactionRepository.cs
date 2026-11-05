@@ -45,6 +45,12 @@ public class TransactionRepository : ITransactionRepository
             .OrderByDescending(t => t.Timestamp)
             .ToListAsync();
 
+    public async Task<IEnumerable<Transaction>> GetAllAsync()
+        => await _context.Transactions
+            .Include(t => t.FraudEvaluation)
+            .OrderByDescending(t => t.Timestamp)
+            .ToListAsync();
+
     public async Task UpdateAsync(Transaction transaction)
     {
         _context.Transactions.Update(transaction);
