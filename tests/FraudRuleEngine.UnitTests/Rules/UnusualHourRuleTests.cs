@@ -1,6 +1,4 @@
 using FraudRuleEngine.Application.Rules;
-using FraudRuleEngine.Core.Models;
-using Xunit;
 
 namespace FraudRuleEngine.UnitTests.Rules;
 
@@ -15,9 +13,8 @@ public class UnusualHourRuleTests
     public void Evaluate_ReturnsTrue_WhenTransactionBetweenMidnightAnd4amSAST(int sastHour)
     {
         // SAST = UTC+2, so 1am SAST = 23:00 UTC previous day
-        var utcTime = DateTime.SpecifyKind(
-            DateTime.Today.AddHours(sastHour - 2), DateTimeKind.Utc);
-        var tx = new Transaction { AccountId = "ACC001", Timestamp = utcTime };
+        var utcTime = DateTime.SpecifyKind(DateTime.Today.AddHours(sastHour - 2), DateTimeKind.Utc);
+        var tx = TestTransactions.Create(timestamp: utcTime);
 
         Assert.True(_rule.Evaluate(tx, []));
     }
@@ -28,9 +25,8 @@ public class UnusualHourRuleTests
     [InlineData(20)]  // 8pm SAST
     public void Evaluate_ReturnsFalse_WhenTransactionDuringBusinessHours(int sastHour)
     {
-        var utcTime = DateTime.SpecifyKind(
-            DateTime.Today.AddHours(sastHour - 2), DateTimeKind.Utc);
-        var tx = new Transaction { AccountId = "ACC001", Timestamp = utcTime };
+        var utcTime = DateTime.SpecifyKind(DateTime.Today.AddHours(sastHour - 2), DateTimeKind.Utc);
+        var tx = TestTransactions.Create(timestamp: utcTime);
 
         Assert.False(_rule.Evaluate(tx, []));
     }

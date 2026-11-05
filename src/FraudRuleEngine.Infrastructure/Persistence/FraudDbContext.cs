@@ -1,4 +1,4 @@
-using FraudRuleEngine.Core.Models;
+using FraudRuleEngine.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -11,6 +11,7 @@ public class FraudDbContext : DbContext
 
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<FraudEvaluation> FraudEvaluations => Set<FraudEvaluation>();
+    public DbSet<AccountEmail> AccountEmails => Set<AccountEmail>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -36,6 +37,12 @@ public class FraudDbContext : DbContext
                  (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                  c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                  c => c.ToList()));
+        });
+
+        modelBuilder.Entity<AccountEmail>(e =>
+        {
+            e.HasKey(a => a.AccountId);
+            e.Property(a => a.Email).IsRequired();
         });
     }
 }

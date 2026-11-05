@@ -1,65 +1,51 @@
-using FraudRuleEngine.Core.Interfaces;
-using FraudRuleEngine.Core.Models;
+using FraudRuleEngine.Core.Features.Transactions;
+using FraudRuleEngine.Domain;
 using FraudRuleEngine.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace FraudRuleEngine.Infrastructure.Repositories;
 
-public class TransactionRepository : ITransactionRepository
+public class TransactionRepository(FraudDbContext context) : ITransactionRepository
 {
-    private readonly FraudDbContext _context;
-
-    public TransactionRepository(FraudDbContext context) => _context = context;
-
-    public async Task<Transaction> AddAsync(Transaction transaction)
+    public async Task AddAsync(Transaction transaction, CancellationToken cancellationToken)
     {
-        _context.Transactions.Add(transaction);
-        await _context.SaveChangesAsync();
-        return transaction;
+        context.Transactions.Add(transaction);
+        await context.SaveChangesAsync(cancellationToken);
     }
 
-    public Task<Transaction?> GetByIdAsync(Guid id)
-        => _context.Transactions
+    public Task<Transaction?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
+        => context.Transactions
             .Include(t => t.FraudEvaluation)
-            .FirstOrDefaultAsync(t => t.Id == id);
+            .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
 
-    public async Task<IEnumerable<Transaction>> GetByAccountIdAsync(string accountId)
-        => await _context.Transactions
+    public Task<List<Transaction>> GetByAccountIdAsync(string accountId, CancellationToken cancellationToken)
+        => context.Transactions
             .Include(t => t.FraudEvaluation)
             .Where(t => t.AccountId == accountId)
             .OrderByDescending(t => t.Timestamp)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
-    public async Task<IEnumerable<Transaction>> GetRecentByAccountIdAsync(string accountId, TimeSpan window)
+    public Task<List<Transaction>> GetRecentByAccountIdAsync(string accountId, TimeSpan window, CancellationToken cancellationToken)
     {
         var since = DateTime.UtcNow - window;
-        return await _context.Transactions
+        return context.Transactions
             .Where(t => t.AccountId == accountId && t.Timestamp >= since)
-            .ToListAsync();
+            .OrderByDescending(t => t.Timestamp)
+            .ToListAsync(cancellationToken);
     }
 
-    public async Task<IEnumerable<Transaction>> GetFlaggedAsync()
-        => await _context.Transactions
-            .Include(t => t.FraudEvaluation)
-            .Where(t => t.FraudEvaluation != null && t.FraudEvaluation.IsFlagged)
-            .OrderByDescending(t => t.Timestamp)
-            .ToListAsync();
-
-    public async Task<IEnumerable<Transaction>> GetAllAsync()
-        => await _context.Transactions
+    public Task<List<Transaction>> GetAllAsync(CancellationToken cancellationToken)
+        => context.Transactions
             .Include(t => t.FraudEvaluation)
             .OrderByDescending(t => t.Timestamp)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
-    public async Task UpdateAsync(Transaction transaction)
-    {
-        _context.Transactions.Update(transaction);
-        await _context.SaveChangesAsync();
-    }
-
-    public async Task AddEvaluationAsync(FraudEvaluation evaluation)
-    {
-        _context.FraudEvaluations.Add(evaluation);
-        await _context.SaveChangesAsync();
-    }
+    public Task<List<Transaction>> GetFlaggedTransactionsAsync(List<string> riskLevels, CancellationToken cancellationToken)
+        => context.Transactions
+            .Include(t => t.FraudEvaluation)
+            .Where(t => t.FraudEvaluation != null
+                        && t.FraudEvaluation.IsFlagged
+                        && riskLevels.Contains(t.FraudEvaluation.RiskLevel))
+            .OrderByDescending(t => t.Timestamp)
+            .ToListAsync(cancellationToken);
 }

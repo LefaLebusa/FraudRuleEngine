@@ -1,6 +1,6 @@
-using FraudRuleEngine.Core.Models;
+using FraudRuleEngine.Domain;
 
-namespace FraudRuleEngine.Core.Rules;
+namespace FraudRuleEngine.Core.Features.Rules;
 
 public interface IFraudRule
 {

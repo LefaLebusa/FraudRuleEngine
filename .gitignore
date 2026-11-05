@@ -15,10 +15,24 @@ publish/
 *.db-shm
 *.db-wal
 
-## Secrets
+## Secrets and local config
 appsettings.Development.json
+appsettings.Local.json
 *secrets*
 .env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.pem
+*.key
+
+## Logs and test output
+*.log
+logs/
+TestResults/
+coverage/
+*.trx
 
 ## Docker
 .dockerignore
@@ -35,3 +49,6 @@ desktop.ini
 .idea/
 .vscode/
 *.rsuser
+
+# Local dev token written by dex/get-token.sh
+dex/.last-token

@@ -1,6 +1,4 @@
 using FraudRuleEngine.Application.Rules;
-using FraudRuleEngine.Core.Models;
-using Xunit;
 
 namespace FraudRuleEngine.UnitTests.Rules;
 
@@ -11,7 +9,7 @@ public class DuplicateTransactionRuleTests
     [Fact]
     public void Evaluate_ReturnsFalse_WhenNoPreviousTransactions()
     {
-        var tx = new Transaction { Id = Guid.NewGuid(), AccountId = "ACC001", Amount = 500m, MerchantName = "ShopRite", Timestamp = DateTime.UtcNow };
+        var tx = TestTransactions.Create(amount: 500m, merchantName: "ShopRite");
         Assert.False(_rule.Evaluate(tx, []));
     }
 
@@ -19,11 +17,8 @@ public class DuplicateTransactionRuleTests
     public void Evaluate_ReturnsTrue_WhenSameAmountAndMerchantWithinWindow()
     {
         var now = DateTime.UtcNow;
-        var tx = new Transaction { Id = Guid.NewGuid(), AccountId = "ACC001", Amount = 500m, MerchantName = "ShopRite", Timestamp = now };
-        var history = new[]
-        {
-            new Transaction { Id = Guid.NewGuid(), AccountId = "ACC001", Amount = 500m, MerchantName = "ShopRite", Timestamp = now.AddSeconds(-30) }
-        };
+        var tx = TestTransactions.Create(amount: 500m, merchantName: "ShopRite", timestamp: now);
+        var history = new[] { TestTransactions.Create(amount: 500m, merchantName: "ShopRite", timestamp: now.AddSeconds(-30)) };
 
         Assert.True(_rule.Evaluate(tx, history));
     }
@@ -32,11 +27,8 @@ public class DuplicateTransactionRuleTests
     public void Evaluate_ReturnsFalse_WhenSameAmountButDifferentMerchant()
     {
         var now = DateTime.UtcNow;
-        var tx = new Transaction { Id = Guid.NewGuid(), AccountId = "ACC001", Amount = 500m, MerchantName = "Checkers", Timestamp = now };
-        var history = new[]
-        {
-            new Transaction { Id = Guid.NewGuid(), AccountId = "ACC001", Amount = 500m, MerchantName = "ShopRite", Timestamp = now.AddSeconds(-30) }
-        };
+        var tx = TestTransactions.Create(amount: 500m, merchantName: "Checkers", timestamp: now);
+        var history = new[] { TestTransactions.Create(amount: 500m, merchantName: "ShopRite", timestamp: now.AddSeconds(-30)) };
 
         Assert.False(_rule.Evaluate(tx, history));
     }

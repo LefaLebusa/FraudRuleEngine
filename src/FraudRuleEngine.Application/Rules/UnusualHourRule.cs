@@ -1,5 +1,5 @@
-using FraudRuleEngine.Core.Models;
-using FraudRuleEngine.Core.Rules;
+using FraudRuleEngine.Core.Features.Rules;
+using FraudRuleEngine.Domain;
 
 namespace FraudRuleEngine.Application.Rules;
 

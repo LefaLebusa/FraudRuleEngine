@@ -2,6 +2,7 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /app
 
 COPY FraudRuleEngine.sln .
+COPY src/FraudRuleEngine.Domain/FraudRuleEngine.Domain.csproj src/FraudRuleEngine.Domain/
 COPY src/FraudRuleEngine.Core/FraudRuleEngine.Core.csproj src/FraudRuleEngine.Core/
 COPY src/FraudRuleEngine.Application/FraudRuleEngine.Application.csproj src/FraudRuleEngine.Application/
 COPY src/FraudRuleEngine.Infrastructure/FraudRuleEngine.Infrastructure.csproj src/FraudRuleEngine.Infrastructure/
@@ -16,5 +17,9 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
 
+ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
+
+# The aspnet base image provides a non-root "app" user; run the API as that user
+USER app
 ENTRYPOINT ["dotnet", "FraudRuleEngine.API.dll"]

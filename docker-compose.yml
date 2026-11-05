@@ -9,10 +9,33 @@ services:
       - "8080:8080"
     environment:
       - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=Production
+      - Authentication__Authority=${AUTH_AUTHORITY:-http://dex:5556}
+      - Authentication__Audience=${AUTH_AUDIENCE:-fraud-portal}
+      - Observability__OtlpEndpoint=${OTLP_ENDPOINT:-http://seq:80/ingest/otlp}
     depends_on:
       db:
         condition: service_healthy
+      seq:
+        condition: service_started
+
+  dex:
+    image: ghcr.io/dexidp/dex:v2.41.1
+    command: ["dex", "serve", "/etc/dex/config.yaml"]
+    ports:
+      - "5556:5556"
+    volumes:
+      - ./dex/config.yaml:/etc/dex/config.yaml:ro
+
+  seq:
+    image: datalust/seq:latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_ADMINPASSWORD=${SEQ_ADMIN_PASSWORD:?Set SEQ_ADMIN_PASSWORD in .env}
+    ports:
+      - "5341:80"
+    volumes:
+      - seqdata:/data
 
   db:
     image: postgres:16-alpine
@@ -32,3 +55,4 @@ services:
 
 volumes:
   pgdata:
+  seqdata:

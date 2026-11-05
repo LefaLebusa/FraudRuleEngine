@@ -1,99 +1,37 @@
-using FraudRuleEngine.Application.Services;
+using System.ComponentModel.DataAnnotations;
+using FraudRuleEngine.Application.Orchestrators.DashboardAndReporting;
+using FraudRuleEngine.Domain;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FraudRuleEngine.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class DashboardController : ControllerBase
+public class DashboardController(
+    DashboardSummaryOrchestratorHandler dashboardSummary,
+    RecentlyFlaggedOrchestratorHandler recentlyFlagged,
+    TrendAnalysisOrchestratorHandler trendAnalysis,
+    MerchantRiskOrchestratorHandler merchantRisk) : ControllerBase
 {
-    private readonly TransactionService _service;
+    private static readonly List<string> FlaggedRiskLevels = [RiskLevels.Medium, RiskLevels.High];
 
-    public DashboardController(TransactionService service) => _service = service;
-
+    /// <summary>Get the dashboard summary.</summary>
     [HttpGet("summary")]
-    public async Task<IActionResult> GetSummary()
-    {
-        var flagged = (await _service.GetFlaggedAsync()).ToList();
-        var all = (await _service.GetAllAsync()).ToList();
+    public async Task<IActionResult> GetSummary(CancellationToken cancellationToken)
+        => Ok(await dashboardSummary.Handle(new DashboardSummaryOrchestrator(), cancellationToken));
 
-        var lowRisk = flagged.Count(f => f.FraudEvaluation?.RiskLevel == "LOW");
-        var mediumRisk = flagged.Count(f => f.FraudEvaluation?.RiskLevel == "MEDIUM");
-        var highRisk = flagged.Count(f => f.FraudEvaluation?.RiskLevel == "HIGH");
-
-        var summary = new
-        {
-            TotalTransactions = all.Count(),
-            FlaggedCount = flagged.Count(),
-            FlaggedPercentage = all.Count > 0 ? Math.Round((double)flagged.Count / all.Count * 100, 2) : 0,
-            RiskDistribution = new
-            {
-                Low = lowRisk,
-                Medium = mediumRisk,
-                High = highRisk
-            }
-        };
-
-        return Ok(summary);
-    }
-
+    /// <summary>Get the most recently flagged transactions.</summary>
     [HttpGet("recent-flagged")]
-    public async Task<IActionResult> GetRecentFlagged(int limit = 10)
-    {
-        var flagged = (await _service.GetFlaggedAsync()).ToList();
-        var recent = flagged
-            .OrderByDescending(f => f.Timestamp)
-            .Take(limit)
-            .Select(f => new
-            {
-                f.Id,
-                f.AccountId,
-                f.Amount,
-                f.MerchantName,
-                f.Timestamp,
-                RiskLevel = f.FraudEvaluation?.RiskLevel,
-                TriggeredRules = f.FraudEvaluation?.TriggeredRules
-            });
+    public async Task<IActionResult> GetRecentFlagged(CancellationToken cancellationToken, [Range(1, 100)] int limit = 10)
+        => Ok(await recentlyFlagged.Handle(new RecentlyFlaggedOrchestrator(FlaggedRiskLevels, limit), cancellationToken));
 
-        return Ok(recent);
-    }
-
+    /// <summary>Get fraud trends over a number of days.</summary>
     [HttpGet("trends")]
-    public async Task<IActionResult> GetTrends(int days = 7)
-    {
-        var all = (await _service.GetAllAsync()).ToList();
-        var startDate = DateTime.UtcNow.AddDays(-days);
+    public async Task<IActionResult> GetTrends(CancellationToken cancellationToken, [Range(1, 365)] int days = 7)
+        => Ok(await trendAnalysis.Handle(new TrendAnalysisOrchestrator(days), cancellationToken));
 
-        var trends = all
-            .Where(t => t.Timestamp >= startDate)
-            .GroupBy(t => t.Timestamp.Date)
-            .OrderBy(g => g.Key)
-            .Select(g => new
-            {
-                Date = g.Key.ToString("yyyy-MM-dd"),
-                Total = g.Count(),
-                AvgAmount = g.Average(t => (double)t.Amount),
-                Flagged = g.Count(t => t.FraudEvaluation?.IsFlagged ?? false)
-            });
-
-        return Ok(trends);
-    }
-
+    /// <summary>Get risk levels grouped by merchant.</summary>
     [HttpGet("risk-by-merchant")]
-    public async Task<IActionResult> GetRiskByMerchant()
-    {
-        var flagged = (await _service.GetFlaggedAsync()).ToList();
-        var byMerchant = flagged
-            .GroupBy(f => f.MerchantName)
-            .OrderByDescending(g => g.Count())
-            .Take(10)
-            .Select(g => new
-            {
-                Merchant = g.Key,
-                FlaggedCount = g.Count(),
-                HighRisk = g.Count(f => f.FraudEvaluation?.RiskLevel == "HIGH")
-            });
-
-        return Ok(byMerchant);
-    }
+    public async Task<IActionResult> GetRiskByMerchant(CancellationToken cancellationToken)
+        => Ok(await merchantRisk.Handle(new MerchantRiskOrchestrator(FlaggedRiskLevels), cancellationToken));
 }
