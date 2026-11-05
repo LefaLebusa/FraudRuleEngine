@@ -1,3 +1,4 @@
+using FluentValidation;
 using FraudRuleEngine.Application.Orchestrators.DashboardAndReporting;
 using FraudRuleEngine.Application.Orchestrators.Evaluations;
 using FraudRuleEngine.Application.Orchestrators.Transactions;
@@ -25,6 +26,9 @@ public static class DependencyInjection
             .AddScoped<RecentlyFlaggedOrchestratorHandler>()
             .AddScoped<TrendAnalysisOrchestratorHandler>()
             .AddScoped<MerchantRiskOrchestratorHandler>();
+
+        // Request validation (FluentValidation validators in this assembly)
+        services.AddValidatorsFromAssemblyContaining<TransactionDtoValidator>();
 
         return services;
     }

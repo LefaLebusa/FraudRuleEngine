@@ -1,4 +1,6 @@
-using System.ComponentModel.DataAnnotations;
+using FluentValidation;
+using FraudRuleEngine.API.Requests;
+using FraudRuleEngine.API.Validation;
 using FraudRuleEngine.Core.Features.AccountEmails;
 using FraudRuleEngine.Domain;
 using Microsoft.AspNetCore.Mvc;
@@ -9,15 +11,25 @@ namespace FraudRuleEngine.API.Controllers;
 // submission so that only an authenticated caller can change an alert recipient.
 [ApiController]
 [Route("api/accounts")]
-public class AccountsController(AddEmailCommandHandler addEmail, ILogger<AccountsController> logger) : ControllerBase
+public class AccountsController(
+    AddEmailCommandHandler addEmail,
+    IValidator<AccountIdRequest> accountIdValidator,
+    IValidator<AlertEmailRequest> alertEmailValidator,
+    ILogger<AccountsController> logger) : ControllerBase
 {
     /// <summary>Set the email address that receives fraud alerts for an account.</summary>
     [HttpPut("{accountId}/alert-email")]
     public async Task<IActionResult> SetAlertEmail(
-        [StringLength(50, MinimumLength = 1)] string accountId,
+        string accountId,
         [FromBody] AlertEmailRequest request,
         CancellationToken cancellationToken)
     {
+        var invalidAccount = await this.ValidateAsync(accountIdValidator, new AccountIdRequest(accountId), cancellationToken);
+        if (invalidAccount is not null) return invalidAccount;
+
+        var invalidEmail = await this.ValidateAsync(alertEmailValidator, request, cancellationToken);
+        if (invalidEmail is not null) return invalidEmail;
+
         await addEmail.Handle(new AddEmailCommand(AccountEmail.Create(request.Email, accountId)), cancellationToken);
 
         // The email address itself is not logged, only the account it was set for
@@ -25,6 +37,3 @@ public class AccountsController(AddEmailCommandHandler addEmail, ILogger<Account
         return NoContent();
     }
 }
-
-public sealed record AlertEmailRequest(
-    [property: Required, EmailAddress, StringLength(254)] string Email);

@@ -1,4 +1,5 @@
 using System.Threading.RateLimiting;
+using FluentValidation;
 using FraudRuleEngine.Application;
 using FraudRuleEngine.Core;
 using FraudRuleEngine.Infrastructure;
@@ -130,6 +131,9 @@ internal class Program
             .AddCore()
             .AddApplication()
             .AddInfrastructure(configuration);
+
+        // Request validators defined in the API project (AccountIdRequest, AlertEmailRequest, query requests)
+        builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 
         // Listen address comes from ASPNETCORE_URLS / launchSettings (e.g. http://+:8080 in Docker)
         var app = builder.Build();
