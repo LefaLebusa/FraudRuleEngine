@@ -8,6 +8,7 @@ using FraudRuleEngine.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
@@ -39,19 +40,31 @@ internal class Program
                       .WithHeaders("Content-Type", "Authorization"));
         });
 
-        // Authentication: JWT bearer tokens issued by the identity provider (e.g. Dex)
-        var authority = configuration["Authentication:Authority"]
-            ?? throw new InvalidOperationException("Authentication:Authority is not configured.");
-        var audience = configuration["Authentication:Audience"]
-            ?? throw new InvalidOperationException("Authentication:Audience is not configured.");
+        // Authentication: JWT tokens issued by the identity provider (Dex locally). Every setting comes from
+        // the "Authentication" section (appsettings*.json), and the options are validated before the app starts.
+        var jwtSecurity = configuration.GetSection(FraudRuleEngine.API.Security.JwtSecurityOptions.SectionName)
+            .Get<FraudRuleEngine.API.Security.JwtSecurityOptions>()
+            ?? throw new InvalidOperationException("The Authentication section is missing from configuration.");
+        jwtSecurity.Validate();
 
         builder.Services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
-                options.Authority = authority;
-                options.Audience = audience;
-                options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+                options.Authority = jwtSecurity.Authority;
+                options.Audience = jwtSecurity.Audience;
+                options.RequireHttpsMetadata = jwtSecurity.RequireHttpsMetadata;
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    // Only set when configured; otherwise the discovery document's issuer is used
+                    ValidIssuer = string.IsNullOrWhiteSpace(jwtSecurity.ValidIssuer) ? null : jwtSecurity.ValidIssuer,
+                    ValidateAudience = true,
+                    ValidAudience = jwtSecurity.Audience,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ClockSkew = TimeSpan.FromSeconds(jwtSecurity.ClockSkewSeconds)
+                };
             });
 
         // Secure by default: every endpoint requires an authenticated caller unless explicitly marked [AllowAnonymous]
@@ -105,7 +118,8 @@ internal class Program
                 Scheme = "bearer",
                 BearerFormat = "JWT",
                 In = ParameterLocation.Header,
-                Description = "Enter a valid JWT access token to access this API."
+                Description = "Paste the Dex ID token (JWT) here, without the 'Bearer ' prefix. " +
+                              "Get one with: bash dex/get-token.sh. Issuer and audience are checked against appsettings."
             });
 
             options.AddSecurityRequirement(new OpenApiSecurityRequirement

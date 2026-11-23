@@ -12,6 +12,8 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - Authentication__Authority=${AUTH_AUTHORITY:-http://dex:5556}
       - Authentication__Audience=${AUTH_AUDIENCE:-fraud-portal}
+      - Authentication__RequireHttpsMetadata=${AUTH_REQUIRE_HTTPS_METADATA:-false}
+      - Cors__AllowedOrigins__0=${DASHBOARD_ORIGIN:-http://localhost:3000}
       - Observability__OtlpEndpoint=${OTLP_ENDPOINT:-http://seq:80/ingest/otlp}
     depends_on:
       db:
